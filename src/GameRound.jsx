@@ -6,12 +6,12 @@ function GameRound({ playerName, onEnd }) {
   const [timeLeft, setTimeLeft] = useState(10);
   const [round, setRound] = useState(generateRound(fullDeck));
   const [score, setScore] = useState(0);
-
   const scoreRef = useRef(0);
   const hasEndedRef = useRef(false);
 
   const [selectedId, setSelectedId] = useState(null);
   const [feedback, setFeedback] = useState(null);
+  const [roundEnded, setRoundEnded] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -19,7 +19,7 @@ function GameRound({ playerName, onEnd }) {
         if (t <= 1 && !hasEndedRef.current) {
           clearInterval(timer);
           hasEndedRef.current = true;
-          onEnd(scoreRef.current);
+          setRoundEnded(true);
         }
         return t - 1;
       });
@@ -29,7 +29,7 @@ function GameRound({ playerName, onEnd }) {
       clearInterval(timer);
       hasEndedRef.current = false;
     };
-  }, [onEnd]);
+  }, []);
 
   const handleSelect = (card) => {
     const isCorrect = card.id === round.correctCard.id;
@@ -66,10 +66,18 @@ function GameRound({ playerName, onEnd }) {
     cursor: 'pointer',
   };
 
-  const renderCard = (card, isSelectable = true) => {
+  const anchorCardStyle = {
+    ...cardStyle,
+    opacity: 0.7,
+    border: '2px dashed #aaa',
+    backgroundColor: '#f2f2f2',
+    cursor: 'default',
+  };
+
+  const renderCard = (card, isSelectable = true, styleOverride = cardStyle) => {
     const isSelected = card.id === selectedId;
-    let backgroundColor = '#ffffff';
-    let borderColor = '#d8cfc1';
+    let backgroundColor = styleOverride.backgroundColor;
+    let borderColor = styleOverride.borderColor || '#d8cfc1';
 
     if (isSelected && feedback === 'correct') {
       backgroundColor = '#dcfce7';
@@ -84,16 +92,16 @@ function GameRound({ playerName, onEnd }) {
         key={card.id}
         onClick={isSelectable && !selectedId ? () => handleSelect(card) : undefined}
         style={{
-          ...cardStyle,
+          ...styleOverride,
           backgroundColor,
           borderColor,
-          pointerEvents: isSelectable && !selectedId ? 'auto' : 'none',
+          pointerEvents: isSelectable && !selectedId && !roundEnded ? 'auto' : 'none',
         }}
         onMouseEnter={(e) => {
-          if (isSelectable && !selectedId) e.currentTarget.style.backgroundColor = '#eae2ff';
+          if (isSelectable && !selectedId && !roundEnded) e.currentTarget.style.backgroundColor = '#eae2ff';
         }}
         onMouseLeave={(e) => {
-          if (isSelectable && !selectedId) e.currentTarget.style.backgroundColor = backgroundColor;
+          if (isSelectable && !selectedId && !roundEnded) e.currentTarget.style.backgroundColor = backgroundColor;
         }}
       >
         {card.sequence}<br />
@@ -107,11 +115,11 @@ function GameRound({ playerName, onEnd }) {
   return (
     <div>
       <h2>Player: {playerName}</h2>
-      <p>Time left: {timeLeft}s | Score: {score}</p>
+      {!roundEnded && <p>Time left: {timeLeft}s | Score: {score}</p>}
 
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-        {renderCard(round.cardA, false)}
-        {renderCard(round.cardB, false)}
+        {renderCard(round.cardA, false, anchorCardStyle)}
+        {renderCard(round.cardB, false, anchorCardStyle)}
       </div>
 
       <div
@@ -124,8 +132,43 @@ function GameRound({ playerName, onEnd }) {
           justifyContent: 'center',
         }}
       >
-        {round.options.map((card) => renderCard(card))}
+        {round.options.map((card) => renderCard(card, true))}
       </div>
+
+      {roundEnded && (
+        <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+          <h3 style={{ marginBottom: '1rem' }}>Score: {score}</h3>
+          <button
+            onClick={() => onEnd(score, 'next')}
+            style={{
+              marginRight: '1rem',
+              padding: '0.6rem 1.2rem',
+              fontSize: '1rem',
+              borderRadius: '6px',
+              backgroundColor: '#5a3e85',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            Next Player
+          </button>
+          <button
+            onClick={() => onEnd(score, 'end')}
+            style={{
+              padding: '0.6rem 1.2rem',
+              fontSize: '1rem',
+              borderRadius: '6px',
+              backgroundColor: '#999',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            End Game
+          </button>
+        </div>
+      )}
     </div>
   );
 }

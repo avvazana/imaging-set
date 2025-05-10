@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import NameEntry from './NameEntry';
 import GameRound from './GameRound';
 import Scoreboard from './Scoreboard';
+import NameEntry from './NameEntry';
+import NameEntryInline from './NameEntryInline';
 
 function App() {
-  const [stage, setStage] = useState('name'); // name → playing → scoreboard
+  const [stage, setStage] = useState('name');
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [scores, setScores] = useState([]);
 
@@ -13,27 +14,40 @@ function App() {
     setStage('playing');
   };
 
-  const endGameForPlayer = (score) => {
-    if (!currentPlayer) return;
-    setScores((prev) => [...prev, { name: currentPlayer, score }]);
+  const resetGame = () => {
+    setScores([]);
     setCurrentPlayer(null);
-    setStage('name');
+    setStage('name'); // make sure this matches your splash screen entry point
   };
   
 
-  const finishAllPlayers = () => {
-    setStage('scoreboard');
+  const endGameForPlayer = (score, action) => {
+    if (!currentPlayer) return;
+    setScores((prev) => [...prev, { name: currentPlayer, score }]);
+    setCurrentPlayer(null);
+
+    if (action === 'next') {
+      setStage('name-inline');
+    } else if (action === 'end') {
+      setStage('scoreboard');
+    }
   };
 
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
       {stage === 'name' && (
-        <NameEntry onStart={startGameForPlayer} onFinish={finishAllPlayers} scores={scores} />
+        <NameEntry onStart={startGameForPlayer} onFinish={() => setStage('scoreboard')} scores={scores} />
+      )}
+      {stage === 'name-inline' && (
+        <NameEntryInline onStart={startGameForPlayer} mode="next" />
       )}
       {stage === 'playing' && (
         <GameRound playerName={currentPlayer} onEnd={endGameForPlayer} />
       )}
-      {stage === 'scoreboard' && <Scoreboard scores={scores} />}
+      {stage === 'scoreboard' && (
+  <Scoreboard scores={scores} onRestart={resetGame} />
+)}
+
     </div>
   );
 }
